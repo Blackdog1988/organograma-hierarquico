@@ -1,254 +1,439 @@
-// Organograma Hierárquico — lógica de edição (TypeScript sem framework)
-// Compilar com: npm run build  (gera ./script.js a partir deste arquivo)
+// Organograma Hierárquico — TypeScript sem framework
+// Fonte única de verdade: o modelo de dados abaixo. O HTML é gerado a partir dele.
+// Compilar com: npm run build
 
 (function () {
   'use strict';
 
-  const arvore = document.querySelector<HTMLElement>('.arvore');
-  const trilho = document.querySelector<HTMLElement>('.trilho');
-  const body = document.body;
-  const btnEditar = document.getElementById('btn-editar') as HTMLButtonElement | null;
-  const STORAGE_KEY = 'organograma-arvore-v2';
+  // ============================================================
+  // 1. TIPOS
+  // ============================================================
 
-  if (!arvore || !trilho) {
-    console.error('Estrutura do organograma não encontrada (.arvore/.trilho ausentes).');
+  type TipoNivel = 'topo' | 'staff' | 'linha' | 'base' | 'terceiro';
+
+  interface Cargo {
+    nome: string;
+    colaboradores: string[];
+  }
+
+  interface NivelMeta {
+    id: string;        // n1 ... n6
+    marco: string;     // rótulo do marcador na trilha lateral
+    tipo: TipoNivel;   // define a cor e a largura do cartão
+    rotulo?: string;   // faixa de texto acima dos cartões; {n} vira a contagem
+  }
+
+  /** Só isto é salvo/exportado. A estrutura visual fica no código. */
+  type Dados = Record<string, Cargo[]>;
+
+  // ============================================================
+  // 2. ESTRUTURA DOS NÍVEIS (não muda com a edição)
+  // ============================================================
+
+  const NIVEIS: NivelMeta[] = [
+    { id: 'n1', marco: 'N1', tipo: 'topo' },
+    { id: 'n2', marco: 'N2', tipo: 'staff', rotulo: 'Assessoria \u00B7 {n} colaboradores' },
+    { id: 'n3', marco: 'N3', tipo: 'linha' },
+    { id: 'n4', marco: 'N4', tipo: 'linha' },
+    { id: 'n5', marco: 'N5', tipo: 'base', rotulo: 'Equipes operacionais \u00B7 {n} colaboradores' },
+    { id: 'n6', marco: 'N6', tipo: 'terceiro', rotulo: 'Colaboradores terceirizados \u00B7 {n}' }
+  ];
+
+  // ============================================================
+  // 3. DADOS INICIAIS (o que vai versionado no Git)
+  // ============================================================
+
+  const DADOS_INICIAIS: Dados = {
+    n1: [
+      { nome: 'Gestor', colaboradores: ['Francisco Claudiomar da Silva'] }
+    ],
+    n2: [
+      { nome: 'Técnico de Segurança do Trabalho', colaboradores: ['Ivan Luiz Calado Moura'] },
+      { nome: 'Analista de RH', colaboradores: ['Simone Rodrigues da Silva'] },
+      { nome: 'Analista de Qualidade', colaboradores: ['Ilton Coelho'] }
+    ],
+    n3: [
+      { nome: 'Supervisor de Logística', colaboradores: ['Mateus Felipe Conceicao Dias'] }
+    ],
+    n4: [
+      { nome: 'Encarregado de Armazém', colaboradores: ['Higor Henrique Faria Salles'] }
+    ],
+    n5: [
+      {
+        nome: 'Líder Logístico',
+        colaboradores: [
+          'Camila Peixoto da Silva',
+          'Diego Maicon Moreira Fernandes de Araujo',
+          'Douglas Henrique Nunes de Campos'
+        ]
+      },
+      {
+        nome: 'Conferente',
+        colaboradores: [
+          'Emanuelly Sander de Oliveira Soares',
+          'Ingrid Marcelly Andrade de Jesus',
+          'Kelly Pires Gomes Rodrigues',
+          'Marcelo Correa de Almeida Ribeiro',
+          'Mayara Susan Xavier Alves',
+          'Pamella Fernanda dos Santos Resende',
+          'Rikelmy Rodrigues Souza da Cruz',
+          'Robson Junio de Paula',
+          'Robson de Oliveira Soares',
+          'Vania Maria Adriano'
+        ]
+      },
+      {
+        nome: 'Operador de Empilhadeira',
+        colaboradores: [
+          'Denison Rodrigues Peres',
+          'Josue Xavier Ferreira da Silva',
+          'Luiz Henrique de Paiva',
+          'Rian Menezes de Matos',
+          'Roberto Carlos Goncalves Moreira',
+          'Vanderlucio Alves da Silva'
+        ]
+      },
+      {
+        nome: 'Ajudante de Logística',
+        colaboradores: [
+          'Adalberto de Almeida Macedo',
+          'Adriano Marques Martins',
+          'Amanda Nicole Gomes de Sa',
+          'Ana Caroline Pereira Freire',
+          'Clauber Augusto Soares',
+          'Daniela Vitoria Alves Maria',
+          'Helen Kethelyn Gomes da Silva',
+          'Larissa Carolina da Silva dos Santos',
+          'Osvane Junior Costa Goncalves',
+          'Rafael Guimaraes Rocha Braga Pereira',
+          'Thays Cristianne da Silva Tavares',
+          'Xaiane Gomes de Araujo'
+        ]
+      },
+      { nome: 'Auxiliar de PCE', colaboradores: ['Camila Maria Fonseca', 'Josiely Ferreira da Silva'] },
+      { nome: 'Auxiliar Administrativo', colaboradores: ['Camila Lopes do Nascimento', 'Thiago Domingos da Silva'] },
+      { nome: 'Oficial de Manutenção', colaboradores: ['Jorge Augusto da Silva'] },
+      { nome: 'Auxiliar de Limpeza', colaboradores: ['Jenifer de Almeida Carvalho', 'Soraia de Mello'] }
+    ],
+    n6: []
+  };
+
+  // ============================================================
+  // 4. ESTADO E PERSISTÊNCIA
+  // ============================================================
+
+  const STORAGE_KEY = 'organograma-dados-v3';
+  const arvore = document.getElementById('arvore');
+  const body = document.body;
+
+  if (!arvore) {
+    console.error('Elemento #arvore não encontrado no HTML.');
     return;
   }
 
-  // ---------- Persistência (localStorage) ----------
+  let dados: Dados = clonar(DADOS_INICIAIS);
+
+  function clonar(origem: Dados): Dados {
+    return JSON.parse(JSON.stringify(origem)) as Dados;
+  }
+
   function salvar(): void {
     try {
-      localStorage.setItem(STORAGE_KEY, arvore!.innerHTML);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
     } catch (e) {
       console.warn('Não foi possível salvar localmente:', e);
     }
   }
 
+  /** Aceita apenas dados no formato esperado; qualquer coisa fora disso é descartada. */
+  function validar(bruto: unknown): Dados | null {
+    if (typeof bruto !== 'object' || bruto === null) return null;
+    const entrada = bruto as Record<string, unknown>;
+    const saida: Dados = {};
+
+    for (const nivel of NIVEIS) {
+      const lista = entrada[nivel.id];
+      if (!Array.isArray(lista)) {
+        saida[nivel.id] = [];
+        continue;
+      }
+      saida[nivel.id] = lista
+        .filter((item): item is Cargo => {
+          const c = item as Cargo;
+          return !!c && typeof c.nome === 'string' && Array.isArray(c.colaboradores);
+        })
+        .map((c) => ({
+          nome: c.nome,
+          colaboradores: c.colaboradores.filter((n) => typeof n === 'string')
+        }));
+    }
+    return saida;
+  }
+
   function carregar(): void {
     try {
       const salvo = localStorage.getItem(STORAGE_KEY);
-      if (salvo) arvore!.innerHTML = salvo;
+      if (!salvo) return;
+      const validado = validar(JSON.parse(salvo));
+      if (validado) dados = validado;
     } catch (e) {
-      console.warn('Não foi possível carregar dados salvos:', e);
+      console.warn('Dados salvos inválidos, usando a versão publicada:', e);
     }
   }
 
-  // ---------- Contagens automáticas ----------
-  function atualizarContagens(): void {
-    const cards = arvore!.querySelectorAll<HTMLElement>('.card');
+  // ============================================================
+  // 5. RENDERIZAÇÃO
+  // ============================================================
 
-    cards.forEach((card) => {
-      const qtd = card.querySelectorAll('.nomes li').length;
-      const badge = card.querySelector('.qtd');
-      if (badge) badge.textContent = String(qtd);
+  function el(tag: string, classe?: string, texto?: string): HTMLElement {
+    const node = document.createElement(tag);
+    if (classe) node.className = classe;
+    if (texto !== undefined) node.textContent = texto;
+    return node;
+  }
+
+  function botao(classe: string, texto: string, rotuloAcessivel: string): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = classe;
+    b.textContent = texto;
+    b.setAttribute('aria-label', rotuloAcessivel);
+    return b;
+  }
+
+  function criarCard(cargo: Cargo, nivel: NivelMeta, indiceCargo: number): HTMLElement {
+    const card = el('article', 'card card--' + nivel.tipo);
+    card.dataset.nivel = nivel.id;
+    card.dataset.cargo = String(indiceCargo);
+
+    const header = el('header');
+    if (nivel.tipo === 'staff') header.appendChild(el('span', 'eyebrow', 'Assessoria'));
+    header.appendChild(el('h3', undefined, cargo.nome));
+    header.appendChild(el('span', 'qtd', String(cargo.colaboradores.length)));
+    header.appendChild(botao('add-colaborador so-edicao no-print', '+', 'Adicionar colaborador'));
+    card.appendChild(header);
+
+    const ul = el('ul', 'nomes');
+    cargo.colaboradores.forEach((nome, i) => {
+      const li = el('li');
+      li.dataset.colaborador = String(i);
+      li.appendChild(document.createTextNode(nome));
+      li.appendChild(botao('del-colaborador so-edicao no-print', '\u00D7', 'Remover ' + nome));
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+
+    card.appendChild(botao('del-cargo so-edicao no-print', 'Remover cargo', 'Remover o cargo ' + cargo.nome));
+    return card;
+  }
+
+  function criarConector(cargosAbaixo: number): HTMLElement {
+    const conector = el('div', 'conector');
+    conector.appendChild(el('div', 'fio'));
+    if (cargosAbaixo > 1) {
+      conector.appendChild(el('div', 'barramento'));
+      conector.appendChild(el('div', 'fio fio--curto'));
+    }
+    return conector;
+  }
+
+  function render(): void {
+    arvore!.textContent = '';
+
+    NIVEIS.forEach((nivel, indice) => {
+      const cargos = dados[nivel.id] || [];
+
+      if (indice > 0) arvore!.appendChild(criarConector(cargos.length));
+
+      // Cada nível é uma LINHA de grid: coluna 1 = marco, coluna 2 = cartões.
+      // O alinhamento passa a ser responsabilidade do CSS, não de cálculo em pixel.
+      const secao = el('section', 'nivel');
+      secao.id = nivel.id;
+
+      const marco = el('div', 'marco marco--' + nivel.tipo);
+      marco.appendChild(el('span', undefined, nivel.marco));
+      secao.appendChild(marco);
+
+      const conteudo = el('div', 'conteudo');
+
+      if (nivel.rotulo) {
+        const total = cargos.reduce((soma, c) => soma + c.colaboradores.length, 0);
+        conteudo.appendChild(el('div', 'faixa', nivel.rotulo.replace('{n}', String(total))));
+      }
+
+      const grade = el('div', 'cargos cargos--' + nivel.tipo);
+      if (cargos.length === 0) {
+        grade.appendChild(el('p', 'vazio', 'Nenhum cargo cadastrado neste nível. Ative "Editar" e use o botão abaixo.'));
+      }
+      cargos.forEach((cargo, i) => grade.appendChild(criarCard(cargo, nivel, i)));
+      conteudo.appendChild(grade);
+
+      const add = botao('add-cargo so-edicao no-print', '+ Novo cargo', 'Adicionar cargo no ' + nivel.marco);
+      add.dataset.nivel = nivel.id;
+      conteudo.appendChild(add);
+
+      secao.appendChild(conteudo);
+      arvore!.appendChild(secao);
     });
 
-    const totalColaboradores = arvore!.querySelectorAll('.nomes li').length;
-    const totalCargos = cards.length;
+    atualizarResumo();
+  }
 
+  function atualizarResumo(): void {
+    let colaboradores = 0;
+    let cargos = 0;
+    for (const nivel of NIVEIS) {
+      const lista = dados[nivel.id] || [];
+      cargos += lista.length;
+      colaboradores += lista.reduce((soma, c) => soma + c.colaboradores.length, 0);
+    }
     const elTotal = document.getElementById('total-colaboradores');
     const elCargos = document.getElementById('total-cargos');
-    if (elTotal) elTotal.textContent = String(totalColaboradores);
-    if (elCargos) elCargos.textContent = 'Cargos: ' + totalCargos;
-
-    const totalBase = document.querySelectorAll('#n5 .nomes li').length;
-    const rotuloBase = document.getElementById('rotulo-base');
-    if (rotuloBase) rotuloBase.textContent = 'Equipes operacionais \u00B7 ' + totalBase + ' colaboradores';
-
-    const totalTerceiro = document.querySelectorAll('#n6 .nomes li').length;
-    const rotuloTerceiro = document.getElementById('rotulo-terceiro');
-    if (rotuloTerceiro) rotuloTerceiro.textContent = 'Colaboradores terceirizados \u00B7 ' + totalTerceiro;
-
-    const vazio = document.querySelector<HTMLElement>('#n6 .vazio');
-    if (vazio) vazio.style.display = totalTerceiro > 0 ? 'none' : '';
-
-    reposicionarMarcos();
+    if (elTotal) elTotal.textContent = String(colaboradores);
+    if (elCargos) elCargos.textContent = 'Cargos: ' + cargos;
   }
 
-  // ---------- Alinhamento dos marcos N1–N6 ----------
-  // Chamada toda vez que o conteúdo muda de altura: ao editar, ao trocar de fonte
-  // (web fonts carregam de forma assíncrona e mudam a altura do texto) e ao redimensionar a janela.
-  function reposicionarMarcos(): void {
-    const trilhoTop = trilho!.getBoundingClientRect().top;
-    document.querySelectorAll<HTMLElement>('.marco[data-target]').forEach((marco) => {
-      const alvoId = marco.dataset.target;
-      if (!alvoId) return;
-      const alvo = document.getElementById(alvoId);
-      if (!alvo) return;
-      const alvoRect = alvo.getBoundingClientRect();
-      const top = (alvoRect.top - trilhoTop) + (alvoRect.height / 2) - 13;
-      marco.style.top = Math.max(0, top) + 'px';
-    });
+  function aplicar(): void {
+    render();
+    salvar();
   }
 
-  // ---------- Injeção dos controles de edição ----------
-  function garantirControles(): void {
-    // botão "+" para adicionar colaborador em cada cargo
-    arvore!.querySelectorAll<HTMLElement>('.card').forEach((card) => {
-      const header = card.querySelector('header');
-      if (header && !header.querySelector('.add-colaborador')) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'add-colaborador so-edicao no-print';
-        btn.setAttribute('aria-label', 'Adicionar colaborador');
-        btn.textContent = '+';
-        header.appendChild(btn);
-      }
-      // botão "Remover cargo" para excluir o card inteiro (necessário para
-      // remover completamente um cargo/pessoa, e não só o nome dentro dele)
-      if (!card.querySelector('.del-cargo')) {
-        const delCargo = document.createElement('button');
-        delCargo.type = 'button';
-        delCargo.className = 'del-cargo so-edicao no-print';
-        delCargo.setAttribute('aria-label', 'Remover cargo inteiro');
-        delCargo.textContent = 'Remover cargo';
-        card.appendChild(delCargo);
-      }
-    });
-    // botão "×" para remover cada colaborador já existente
-    arvore!.querySelectorAll<HTMLElement>('.nomes li').forEach((li) => {
-      if (!li.querySelector('.del-colaborador')) {
-        const del = document.createElement('button');
-        del.type = 'button';
-        del.className = 'del-colaborador so-edicao no-print';
-        del.setAttribute('aria-label', 'Remover colaborador');
-        del.textContent = '\u00D7';
-        li.appendChild(del);
-      }
-    });
+  // ============================================================
+  // 6. AÇÕES DE EDIÇÃO
+  // ============================================================
+
+  function localizarCargo(alvo: HTMLElement): { nivelId: string; indice: number } | null {
+    const card = alvo.closest('.card') as HTMLElement | null;
+    if (!card || !card.dataset.nivel || card.dataset.cargo === undefined) return null;
+    return { nivelId: card.dataset.nivel, indice: Number(card.dataset.cargo) };
   }
 
-  // ---------- Ações ----------
-  function nomeDoLi(li: HTMLElement): string {
-    return (li.childNodes[0] && li.childNodes[0].textContent || '').trim();
-  }
-
-  function adicionarColaborador(card: HTMLElement): void {
+  function adicionarColaborador(nivelId: string, indice: number): void {
     const nome = window.prompt('Nome do novo colaborador:');
     if (!nome || !nome.trim()) return;
-    const ul = card.querySelector('.nomes');
-    if (!ul) return;
-    const li = document.createElement('li');
-    li.appendChild(document.createTextNode(nome.trim()));
-    ul.appendChild(li);
-    garantirControles();
-    atualizarContagens();
-    salvar();
+    dados[nivelId][indice].colaboradores.push(nome.trim());
+    aplicar();
   }
 
-  function removerColaborador(li: HTMLElement): void {
-    const nome = nomeDoLi(li) || 'este colaborador';
+  function removerColaborador(nivelId: string, indiceCargo: number, indiceColab: number): void {
+    const nome = dados[nivelId][indiceCargo].colaboradores[indiceColab];
     if (!window.confirm('Remover ' + nome + '?')) return;
-    li.remove();
-    atualizarContagens();
-    salvar();
+    dados[nivelId][indiceCargo].colaboradores.splice(indiceColab, 1);
+    aplicar();
   }
 
-  function removerCargo(card: HTMLElement): void {
-    const titulo = card.querySelector('h3');
-    const nomeCargo = titulo ? titulo.textContent : 'este cargo';
-    if (!window.confirm('Remover o cargo "' + nomeCargo + '" e todos os colaboradores nele?')) return;
-    card.remove();
-    atualizarContagens();
-    salvar();
+  function removerCargo(nivelId: string, indice: number): void {
+    const cargo = dados[nivelId][indice];
+    if (!window.confirm('Remover o cargo "' + cargo.nome + '" e seus ' + cargo.colaboradores.length + ' colaborador(es)?')) return;
+    dados[nivelId].splice(indice, 1);
+    aplicar();
   }
 
-  function escapeHtml(texto: string): string {
-    const div = document.createElement('div');
-    div.textContent = texto;
-    return div.innerHTML;
-  }
-
-  function novoCargo(container: HTMLElement, classe: string): void {
-    const cargo = window.prompt('Nome do novo cargo:');
-    if (!cargo || !cargo.trim()) return;
-    const nome = window.prompt('Nome do primeiro colaborador neste cargo:');
+  function novoCargo(nivelId: string): void {
+    const nome = window.prompt('Nome do novo cargo:');
     if (!nome || !nome.trim()) return;
-
-    const art = document.createElement('article');
-    art.className = 'card ' + classe;
-    art.innerHTML = '<header><h3>' + escapeHtml(cargo.trim()) + '</h3><span class="qtd">0</span></header><ul class="nomes"></ul>';
-    const li = document.createElement('li');
-    li.appendChild(document.createTextNode(nome.trim()));
-    const ul = art.querySelector('.nomes');
-    if (ul) ul.appendChild(li);
-
-    const btnAddCargo = container.querySelector('.add-cargo');
-    if (btnAddCargo) {
-      container.insertBefore(art, btnAddCargo);
-    } else {
-      container.appendChild(art);
-    }
-    garantirControles();
-    atualizarContagens();
-    salvar();
+    const colaborador = window.prompt('Nome do primeiro colaborador (deixe em branco para cadastrar depois):');
+    const lista: string[] = colaborador && colaborador.trim() ? [colaborador.trim()] : [];
+    dados[nivelId].push({ nome: nome.trim(), colaboradores: lista });
+    aplicar();
   }
 
-  // ---------- Delegação de eventos ----------
+  // ============================================================
+  // 7. EVENTOS
+  // ============================================================
+
   arvore.addEventListener('click', (e: MouseEvent) => {
     if (!body.classList.contains('modo-edicao')) return;
     const alvo = e.target as HTMLElement;
 
-    const delBtn = alvo.closest('.del-colaborador');
-    if (delBtn) {
-      const li = delBtn.closest('li');
-      if (li) removerColaborador(li as HTMLElement);
+    const btnDelColab = alvo.closest('.del-colaborador');
+    if (btnDelColab) {
+      const ref = localizarCargo(alvo);
+      const li = alvo.closest('li') as HTMLElement | null;
+      if (ref && li && li.dataset.colaborador !== undefined) {
+        removerColaborador(ref.nivelId, ref.indice, Number(li.dataset.colaborador));
+      }
       return;
     }
 
-    const delCargoBtn = alvo.closest('.del-cargo');
-    if (delCargoBtn) {
-      const card = delCargoBtn.closest('.card');
-      if (card) removerCargo(card as HTMLElement);
+    if (alvo.closest('.del-cargo')) {
+      const ref = localizarCargo(alvo);
+      if (ref) removerCargo(ref.nivelId, ref.indice);
       return;
     }
 
-    const addColabBtn = alvo.closest('.add-colaborador');
-    if (addColabBtn) {
-      const card = addColabBtn.closest('.card');
-      if (card) adicionarColaborador(card as HTMLElement);
+    if (alvo.closest('.add-colaborador')) {
+      const ref = localizarCargo(alvo);
+      if (ref) adicionarColaborador(ref.nivelId, ref.indice);
       return;
     }
 
-    const addCargoBtn = alvo.closest('.add-cargo') as HTMLElement | null;
-    if (addCargoBtn) {
-      const containerId = addCargoBtn.dataset.container === 'terceiro' ? 'n6' : 'n5';
-      const container = document.getElementById(containerId);
-      if (container) novoCargo(container, addCargoBtn.dataset.classe || 'card--base');
+    const btnAddCargo = alvo.closest('.add-cargo') as HTMLElement | null;
+    if (btnAddCargo && btnAddCargo.dataset.nivel) {
+      novoCargo(btnAddCargo.dataset.nivel);
       return;
     }
   });
 
+  const btnEditar = document.getElementById('btn-editar') as HTMLButtonElement | null;
   if (btnEditar) {
     btnEditar.addEventListener('click', () => {
       const ativo = body.classList.toggle('modo-edicao');
-      btnEditar.textContent = ativo ? 'Concluir edição' : 'Editar';
+      btnEditar.textContent = ativo ? 'Concluir' : 'Editar';
       btnEditar.classList.toggle('ativo', ativo);
-      reposicionarMarcos();
     });
   }
 
-  window.addEventListener('resize', reposicionarMarcos);
-  window.addEventListener('load', reposicionarMarcos);
-
-  // As fontes do Google Fonts carregam de forma assíncrona; quando terminam,
-  // o texto reflui (tamanhos diferentes) e os marcos precisam ser recalculados.
-  if ('fonts' in document) {
-    (document as Document).fonts.ready.then(reposicionarMarcos).catch(() => {
-      /* navegador sem suporte completo à Font Loading API — ignorar */
+  const btnExportar = document.getElementById('btn-exportar');
+  if (btnExportar) {
+    btnExportar.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'organograma.json';
+      link.click();
+      URL.revokeObjectURL(url);
     });
   }
 
-  // Reposiciona também se o conteúdo mudar de altura por qualquer outro motivo
-  // (ex.: zoom do navegador, orientação do celular).
-  if ('ResizeObserver' in window) {
-    const observer = new ResizeObserver(() => reposicionarMarcos());
-    const nivel = document.querySelector('.nivel');
-    if (nivel) observer.observe(nivel);
+  const inputImportar = document.getElementById('input-importar') as HTMLInputElement | null;
+  const btnImportar = document.getElementById('btn-importar');
+  if (btnImportar && inputImportar) {
+    btnImportar.addEventListener('click', () => inputImportar.click());
+    inputImportar.addEventListener('change', () => {
+      const arquivo = inputImportar.files && inputImportar.files[0];
+      if (!arquivo) return;
+      const leitor = new FileReader();
+      leitor.onload = () => {
+        try {
+          const validado = validar(JSON.parse(String(leitor.result)));
+          if (!validado) throw new Error('formato inesperado');
+          dados = validado;
+          aplicar();
+        } catch (err) {
+          window.alert('Não foi possível ler este arquivo. Selecione um organograma.json exportado por esta página.');
+          console.warn(err);
+        }
+      };
+      leitor.readAsText(arquivo);
+      inputImportar.value = '';
+    });
   }
 
-  // ---------- Inicialização ----------
+  const btnRestaurar = document.getElementById('btn-restaurar');
+  if (btnRestaurar) {
+    btnRestaurar.addEventListener('click', () => {
+      if (!window.confirm('Descartar as alterações locais e voltar à versão publicada?')) return;
+      dados = clonar(DADOS_INICIAIS);
+      aplicar();
+    });
+  }
+
+  // ============================================================
+  // 8. INICIALIZAÇÃO
+  // ============================================================
+
   carregar();
-  garantirControles();
-  atualizarContagens();
+  render();
 })();
