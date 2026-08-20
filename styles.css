@@ -143,6 +143,14 @@ body.modo-edicao .nomes li {
 }
 .del-colaborador:hover { color:var(--terceiro); }
 
+.del-cargo {
+  display:none; margin-top:10px; width:100%; font-family:var(--cond); text-transform:uppercase;
+  letter-spacing:.06em; font-size:11px; background:var(--white); border:1px solid var(--line);
+  color:var(--mist); padding:6px 8px; cursor:pointer;
+}
+body.modo-edicao .del-cargo { display:block; }
+.del-cargo:hover { border-color:var(--terceiro); color:var(--terceiro); background:#FDEDEC; }
+
 .add-cargo {
   font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em; font-size:12px;
   background:var(--white); border:1px dashed var(--line); color:var(--steel); padding:10px 14px;
