@@ -1,248 +1,174 @@
-"use strict";
-// Organograma Hierárquico — lógica de edição (TypeScript sem framework)
-// Compilar com: npm run build  (gera ./script.js a partir deste arquivo)
-(function () {
-    'use strict';
-    const arvore = document.querySelector('.arvore');
-    const trilho = document.querySelector('.trilho');
-    const body = document.body;
-    const btnEditar = document.getElementById('btn-editar');
-    const STORAGE_KEY = 'organograma-arvore-v2';
-    if (!arvore || !trilho) {
-        console.error('Estrutura do organograma não encontrada (.arvore/.trilho ausentes).');
-        return;
-    }
-    // ---------- Persistência (localStorage) ----------
-    function salvar() {
-        try {
-            localStorage.setItem(STORAGE_KEY, arvore.innerHTML);
-        }
-        catch (e) {
-            console.warn('Não foi possível salvar localmente:', e);
-        }
-    }
-    function carregar() {
-        try {
-            const salvo = localStorage.getItem(STORAGE_KEY);
-            if (salvo)
-                arvore.innerHTML = salvo;
-        }
-        catch (e) {
-            console.warn('Não foi possível carregar dados salvos:', e);
-        }
-    }
-    // ---------- Contagens automáticas ----------
-    function atualizarContagens() {
-        const cards = arvore.querySelectorAll('.card');
-        cards.forEach((card) => {
-            const qtd = card.querySelectorAll('.nomes li').length;
-            const badge = card.querySelector('.qtd');
-            if (badge)
-                badge.textContent = String(qtd);
-        });
-        const totalColaboradores = arvore.querySelectorAll('.nomes li').length;
-        const totalCargos = cards.length;
-        const elTotal = document.getElementById('total-colaboradores');
-        const elCargos = document.getElementById('total-cargos');
-        if (elTotal)
-            elTotal.textContent = String(totalColaboradores);
-        if (elCargos)
-            elCargos.textContent = 'Cargos: ' + totalCargos;
-        const totalBase = document.querySelectorAll('#n5 .nomes li').length;
-        const rotuloBase = document.getElementById('rotulo-base');
-        if (rotuloBase)
-            rotuloBase.textContent = 'Equipes operacionais \u00B7 ' + totalBase + ' colaboradores';
-        const totalTerceiro = document.querySelectorAll('#n6 .nomes li').length;
-        const rotuloTerceiro = document.getElementById('rotulo-terceiro');
-        if (rotuloTerceiro)
-            rotuloTerceiro.textContent = 'Colaboradores terceirizados \u00B7 ' + totalTerceiro;
-        const vazio = document.querySelector('#n6 .vazio');
-        if (vazio)
-            vazio.style.display = totalTerceiro > 0 ? 'none' : '';
-        reposicionarMarcos();
-    }
-    // ---------- Alinhamento dos marcos N1–N6 ----------
-    // Chamada toda vez que o conteúdo muda de altura: ao editar, ao trocar de fonte
-    // (web fonts carregam de forma assíncrona e mudam a altura do texto) e ao redimensionar a janela.
-    function reposicionarMarcos() {
-        const trilhoTop = trilho.getBoundingClientRect().top;
-        document.querySelectorAll('.marco[data-target]').forEach((marco) => {
-            const alvoId = marco.dataset.target;
-            if (!alvoId)
-                return;
-            const alvo = document.getElementById(alvoId);
-            if (!alvo)
-                return;
-            const alvoRect = alvo.getBoundingClientRect();
-            const top = (alvoRect.top - trilhoTop) + (alvoRect.height / 2) - 13;
-            marco.style.top = Math.max(0, top) + 'px';
-        });
-    }
-    // ---------- Injeção dos controles de edição ----------
-    function garantirControles() {
-        // botão "+" para adicionar colaborador em cada cargo
-        arvore.querySelectorAll('.card').forEach((card) => {
-            const header = card.querySelector('header');
-            if (header && !header.querySelector('.add-colaborador')) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'add-colaborador so-edicao no-print';
-                btn.setAttribute('aria-label', 'Adicionar colaborador');
-                btn.textContent = '+';
-                header.appendChild(btn);
-            }
-            // botão "Remover cargo" para excluir o card inteiro (necessário para
-            // remover completamente um cargo/pessoa, e não só o nome dentro dele)
-            if (!card.querySelector('.del-cargo')) {
-                const delCargo = document.createElement('button');
-                delCargo.type = 'button';
-                delCargo.className = 'del-cargo so-edicao no-print';
-                delCargo.setAttribute('aria-label', 'Remover cargo inteiro');
-                delCargo.textContent = 'Remover cargo';
-                card.appendChild(delCargo);
-            }
-        });
-        // botão "×" para remover cada colaborador já existente
-        arvore.querySelectorAll('.nomes li').forEach((li) => {
-            if (!li.querySelector('.del-colaborador')) {
-                const del = document.createElement('button');
-                del.type = 'button';
-                del.className = 'del-colaborador so-edicao no-print';
-                del.setAttribute('aria-label', 'Remover colaborador');
-                del.textContent = '\u00D7';
-                li.appendChild(del);
-            }
-        });
-    }
-    // ---------- Ações ----------
-    function nomeDoLi(li) {
-        return (li.childNodes[0] && li.childNodes[0].textContent || '').trim();
-    }
-    function adicionarColaborador(card) {
-        const nome = window.prompt('Nome do novo colaborador:');
-        if (!nome || !nome.trim())
-            return;
-        const ul = card.querySelector('.nomes');
-        if (!ul)
-            return;
-        const li = document.createElement('li');
-        li.appendChild(document.createTextNode(nome.trim()));
-        ul.appendChild(li);
-        garantirControles();
-        atualizarContagens();
-        salvar();
-    }
-    function removerColaborador(li) {
-        const nome = nomeDoLi(li) || 'este colaborador';
-        if (!window.confirm('Remover ' + nome + '?'))
-            return;
-        li.remove();
-        atualizarContagens();
-        salvar();
-    }
-    function removerCargo(card) {
-        const titulo = card.querySelector('h3');
-        const nomeCargo = titulo ? titulo.textContent : 'este cargo';
-        if (!window.confirm('Remover o cargo "' + nomeCargo + '" e todos os colaboradores nele?'))
-            return;
-        card.remove();
-        atualizarContagens();
-        salvar();
-    }
-    function escapeHtml(texto) {
-        const div = document.createElement('div');
-        div.textContent = texto;
-        return div.innerHTML;
-    }
-    function novoCargo(container, classe) {
-        const cargo = window.prompt('Nome do novo cargo:');
-        if (!cargo || !cargo.trim())
-            return;
-        const nome = window.prompt('Nome do primeiro colaborador neste cargo:');
-        if (!nome || !nome.trim())
-            return;
-        const art = document.createElement('article');
-        art.className = 'card ' + classe;
-        art.innerHTML = '<header><h3>' + escapeHtml(cargo.trim()) + '</h3><span class="qtd">0</span></header><ul class="nomes"></ul>';
-        const li = document.createElement('li');
-        li.appendChild(document.createTextNode(nome.trim()));
-        const ul = art.querySelector('.nomes');
-        if (ul)
-            ul.appendChild(li);
-        const btnAddCargo = container.querySelector('.add-cargo');
-        if (btnAddCargo) {
-            container.insertBefore(art, btnAddCargo);
-        }
-        else {
-            container.appendChild(art);
-        }
-        garantirControles();
-        atualizarContagens();
-        salvar();
-    }
-    // ---------- Delegação de eventos ----------
-    arvore.addEventListener('click', (e) => {
-        if (!body.classList.contains('modo-edicao'))
-            return;
-        const alvo = e.target;
-        const delBtn = alvo.closest('.del-colaborador');
-        if (delBtn) {
-            const li = delBtn.closest('li');
-            if (li)
-                removerColaborador(li);
-            return;
-        }
-        const delCargoBtn = alvo.closest('.del-cargo');
-        if (delCargoBtn) {
-            const card = delCargoBtn.closest('.card');
-            if (card)
-                removerCargo(card);
-            return;
-        }
-        const addColabBtn = alvo.closest('.add-colaborador');
-        if (addColabBtn) {
-            const card = addColabBtn.closest('.card');
-            if (card)
-                adicionarColaborador(card);
-            return;
-        }
-        const addCargoBtn = alvo.closest('.add-cargo');
-        if (addCargoBtn) {
-            const containerId = addCargoBtn.dataset.container === 'terceiro' ? 'n6' : 'n5';
-            const container = document.getElementById(containerId);
-            if (container)
-                novoCargo(container, addCargoBtn.dataset.classe || 'card--base');
-            return;
-        }
-    });
-    if (btnEditar) {
-        btnEditar.addEventListener('click', () => {
-            const ativo = body.classList.toggle('modo-edicao');
-            btnEditar.textContent = ativo ? 'Concluir edição' : 'Editar';
-            btnEditar.classList.toggle('ativo', ativo);
-            reposicionarMarcos();
-        });
-    }
-    window.addEventListener('resize', reposicionarMarcos);
-    window.addEventListener('load', reposicionarMarcos);
-    // As fontes do Google Fonts carregam de forma assíncrona; quando terminam,
-    // o texto reflui (tamanhos diferentes) e os marcos precisam ser recalculados.
-    if ('fonts' in document) {
-        document.fonts.ready.then(reposicionarMarcos).catch(() => {
-            /* navegador sem suporte completo à Font Loading API — ignorar */
-        });
-    }
-    // Reposiciona também se o conteúdo mudar de altura por qualquer outro motivo
-    // (ex.: zoom do navegador, orientação do celular).
-    if ('ResizeObserver' in window) {
-        const observer = new ResizeObserver(() => reposicionarMarcos());
-        const nivel = document.querySelector('.nivel');
-        if (nivel)
-            observer.observe(nivel);
-    }
-    // ---------- Inicialização ----------
-    carregar();
-    garantirControles();
-    atualizarContagens();
-})();
-//# sourceMappingURL=script.js.map
+:root {
+  --ink:#16202B; --steel:#44586B; --mist:#8296A6;
+  --line:#C3CDD6; --paper:#EFF2F5; --white:#FFFFFF;
+  --hiviz:#FFC400; --hiviz-deep:#B98A00;
+  --terceiro:#D63A2E; --terceiro-deep:#8F241B;
+  --cond:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'Inter','Segoe UI',Arial,sans-serif;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:32px 20px 56px; background:var(--paper); color:var(--ink);
+  font-family:var(--body); -webkit-font-smoothing:antialiased;
+}
+.folha { max-width:1180px; margin:0 auto; }
+
+/* ---------- cabeçalho ---------- */
+.topo {
+  display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+  gap:16px; padding-bottom:14px; border-bottom:3px solid var(--ink); margin-bottom:8px;
+}
+.topo h1 {
+  font-family:var(--cond); font-weight:700; font-size:38px; line-height:1;
+  letter-spacing:.02em; text-transform:uppercase; margin:0;
+}
+.topo p { margin:6px 0 0; color:var(--steel); font-size:13.5px; max-width:52ch; }
+.acoes { display:flex; align-items:flex-end; gap:18px; }
+.selo {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em;
+  font-size:12px; color:var(--steel); text-align:right; line-height:1.7;
+}
+.selo b { display:block; font-size:30px; color:var(--ink); letter-spacing:0; line-height:1; }
+.barra-hiviz {
+  height:7px; margin-bottom:34px;
+  background:repeating-linear-gradient(135deg,var(--hiviz) 0 14px,var(--ink) 14px 28px);
+}
+
+/* ---------- botão de edição ---------- */
+#btn-editar {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em; font-size:12px;
+  background:var(--ink); color:var(--white); border:none; padding:9px 18px; cursor:pointer;
+  height:fit-content;
+}
+#btn-editar:hover { background:var(--steel); }
+#btn-editar.ativo { background:var(--hiviz); color:var(--ink); }
+
+/* ---------- estrutura da árvore ---------- */
+.arvore { display:grid; grid-template-columns:74px 1fr; gap:0 18px; }
+.trilho { position:relative; }
+.trilho::before {
+  content:""; position:absolute; left:26px; top:12px; bottom:12px;
+  width:2px; background:var(--line);
+}
+.marco { position:absolute; left:0; display:flex; align-items:center; gap:8px; transition:top .15s ease; }
+.marco span {
+  width:54px; height:26px; display:grid; place-items:center; background:var(--ink);
+  color:var(--white); font-family:var(--cond); font-size:13px; letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.marco.staff span { background:var(--hiviz); color:var(--ink); }
+.marco.terceiro span { background:var(--terceiro); color:var(--white); }
+
+.nivel { display:flex; flex-direction:column; align-items:center; }
+.fio { width:2px; height:26px; background:var(--line); }
+.fio--curto { height:18px; }
+.barramento { width:min(100%,880px); height:2px; background:var(--line); }
+
+.linha { display:flex; justify-content:center; gap:22px; flex-wrap:wrap; width:100%; }
+.ramo { display:flex; flex-direction:column; align-items:center; }
+
+/* ---------- cartões ---------- */
+.card {
+  background:var(--white); border:1px solid var(--line); border-top:4px solid var(--steel);
+  width:250px; padding:12px 14px 13px; text-align:left;
+  box-shadow:0 1px 2px rgba(22,32,43,.06);
+}
+.card header { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.card h3 {
+  font-family:var(--cond); font-weight:600; text-transform:uppercase; letter-spacing:.03em;
+  font-size:17px; line-height:1.15; margin:0; flex:1;
+}
+.qtd {
+  font-family:var(--cond); font-size:13px; color:var(--steel);
+  border:1px solid var(--line); padding:1px 7px; letter-spacing:.05em;
+}
+.eyebrow {
+  width:100%; font-family:var(--cond); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--hiviz-deep);
+}
+.nomes { list-style:none; margin:9px 0 0; padding:9px 0 0; border-top:1px solid var(--paper); }
+.nomes li { font-size:12.6px; line-height:1.5; color:var(--steel); }
+.nomes li + li { margin-top:1px; }
+
+.card--topo { border-top-color:var(--ink); width:300px; }
+.card--topo h3 { font-size:21px; }
+.card--topo .nomes li { font-size:14px; font-weight:600; color:var(--ink); }
+.card--staff { border-top-color:var(--hiviz); }
+.card--linha { border-top-color:var(--ink); width:280px; }
+.card--linha .nomes li { font-size:13.5px; font-weight:500; color:var(--ink); }
+.card--base { width:255px; }
+.card--terceiro { width:255px; border-top-color:var(--terceiro); }
+.card--terceiro .eyebrow { color:var(--terceiro-deep); }
+
+.base {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(255px,1fr));
+  gap:20px; width:100%; justify-items:center;
+}
+.base-rotulo {
+  width:100%; text-align:center; font-family:var(--cond); font-size:12px;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--mist); margin-bottom:14px;
+}
+.rotulo-terceiro { color:var(--terceiro-deep); }
+.vazio {
+  grid-column:1 / -1; text-align:center; font-size:13px; color:var(--mist);
+  border:1px dashed var(--line); padding:18px; margin:0;
+}
+
+.rodape {
+  margin-top:40px; padding-top:14px; border-top:1px solid var(--line);
+  display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between;
+  font-size:11.5px; color:var(--mist);
+}
+
+/* ---------- edição: adicionar / remover ---------- */
+.so-edicao { display:none; }
+body.modo-edicao .so-edicao { display:inline-flex; }
+body.modo-edicao .add-cargo.so-edicao { display:block; }
+body.modo-edicao .vazio.so-edicao { display:block; }
+
+.add-colaborador {
+  margin-left:auto; width:20px; height:20px; border:1px solid var(--line); background:var(--white);
+  color:var(--steel); font-family:var(--cond); font-size:14px; line-height:1; cursor:pointer;
+  align-items:center; justify-content:center; padding:0;
+}
+.add-colaborador:hover { background:var(--hiviz); border-color:var(--hiviz-deep); color:var(--ink); }
+.card--terceiro .add-colaborador:hover { background:var(--terceiro); border-color:var(--terceiro-deep); color:var(--white); }
+
+body.modo-edicao .nomes li {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.del-colaborador {
+  border:none; background:none; color:var(--mist); cursor:pointer; font-size:14px;
+  line-height:1; padding:0 2px;
+}
+.del-colaborador:hover { color:var(--terceiro); }
+
+.del-cargo {
+  display:none; margin-top:10px; width:100%; font-family:var(--cond); text-transform:uppercase;
+  letter-spacing:.06em; font-size:11px; background:var(--white); border:1px solid var(--line);
+  color:var(--mist); padding:6px 8px; cursor:pointer;
+}
+body.modo-edicao .del-cargo { display:block; }
+.del-cargo:hover { border-color:var(--terceiro); color:var(--terceiro); background:#FDEDEC; }
+
+.add-cargo {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em; font-size:12px;
+  background:var(--white); border:1px dashed var(--line); color:var(--steel); padding:10px 14px;
+  cursor:pointer; width:255px; margin:0 auto;
+}
+.add-cargo:hover { border-color:var(--ink); color:var(--ink); }
+#n6 .add-cargo:hover { border-color:var(--terceiro); color:var(--terceiro-deep); }
+
+@media (max-width:820px) {
+  .arvore { grid-template-columns:1fr; }
+  .trilho { display:none; }
+  .card, .card--topo, .card--linha, .card--base, .card--terceiro { width:100%; max-width:420px; }
+  .barramento { display:none; }
+  .acoes { width:100%; justify-content:space-between; }
+}
+@media print {
+  body { background:var(--white); padding:0; }
+  .card { box-shadow:none; break-inside:avoid; }
+  .no-print { display:none !important; }
+  @page { size:A3 portrait; margin:12mm; }
+}
