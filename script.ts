@@ -1,439 +1,192 @@
-// Organograma Hierárquico — TypeScript sem framework
-// Fonte única de verdade: o modelo de dados abaixo. O HTML é gerado a partir dele.
-// Compilar com: npm run build
+:root {
+  --ink:#16202B; --steel:#44586B; --mist:#8296A6;
+  --line:#C3CDD6; --paper:#EFF2F5; --white:#FFFFFF;
+  --hiviz:#FFC400; --hiviz-deep:#B98A00;
+  --terceiro:#D63A2E; --terceiro-deep:#8F241B; --terceiro-claro:#FDEDEC;
+  --trilha:92px; /* 74px do marco + 18px de respiro */
+  --cond:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'Inter','Segoe UI',Arial,sans-serif;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:32px 20px 56px; background:var(--paper); color:var(--ink);
+  font-family:var(--body); -webkit-font-smoothing:antialiased;
+}
+.folha { max-width:1180px; margin:0 auto; }
 
-(function () {
-  'use strict';
+/* ---------- cabeçalho ---------- */
+.topo {
+  display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+  gap:16px; padding-bottom:14px; border-bottom:3px solid var(--ink); margin-bottom:8px;
+}
+.topo h1 {
+  font-family:var(--cond); font-weight:700; font-size:38px; line-height:1;
+  letter-spacing:.02em; text-transform:uppercase; margin:0;
+}
+.topo p { margin:6px 0 0; color:var(--steel); font-size:13.5px; max-width:52ch; }
+.acoes { display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; }
+.selo {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em;
+  font-size:12px; color:var(--steel); text-align:right; line-height:1.7;
+}
+.selo b { display:block; font-size:30px; color:var(--ink); letter-spacing:0; line-height:1; }
+.botoes { display:flex; gap:6px; flex-wrap:wrap; }
+.barra-hiviz {
+  height:7px; margin-bottom:34px;
+  background:repeating-linear-gradient(135deg,var(--hiviz) 0 14px,var(--ink) 14px 28px);
+}
 
-  // ============================================================
-  // 1. TIPOS
-  // ============================================================
+/* ---------- botões do topo ---------- */
+.botao {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em; font-size:12px;
+  background:var(--white); color:var(--steel); border:1px solid var(--line);
+  padding:9px 14px; cursor:pointer;
+}
+.botao:hover { border-color:var(--ink); color:var(--ink); }
+.botao:focus-visible { outline:2px solid var(--hiviz-deep); outline-offset:2px; }
+.botao--primario { background:var(--ink); color:var(--white); border-color:var(--ink); }
+.botao--primario:hover { background:var(--steel); border-color:var(--steel); color:var(--white); }
+.botao--primario.ativo { background:var(--hiviz); border-color:var(--hiviz-deep); color:var(--ink); }
 
-  type TipoNivel = 'topo' | 'staff' | 'linha' | 'base' | 'terceiro';
+/* ---------- árvore: cada nível é uma linha de grid ---------- */
+/* O marco fica na coluna 1 e os cartões na coluna 2, na MESMA linha.
+   Isso mantém N1..N6 alinhados aos seus cargos independentemente da
+   quantidade de colaboradores, da fonte carregada ou do zoom. */
+.arvore { position:relative; }
+.arvore::before {
+  content:""; position:absolute; left:26px; top:12px; bottom:12px;
+  width:2px; background:var(--line);
+}
+.carregando { padding-left:var(--trilha); color:var(--mist); font-size:13px; }
 
-  interface Cargo {
-    nome: string;
-    colaboradores: string[];
-  }
+.nivel {
+  display:grid; grid-template-columns:74px 1fr; gap:0 18px; align-items:center;
+}
+.marco { position:relative; z-index:1; }
+.marco span {
+  width:54px; height:26px; display:grid; place-items:center; background:var(--ink);
+  color:var(--white); font-family:var(--cond); font-size:13px; letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.marco--staff span { background:var(--hiviz); color:var(--ink); }
+.marco--terceiro span { background:var(--terceiro); color:var(--white); }
 
-  interface NivelMeta {
-    id: string;        // n1 ... n6
-    marco: string;     // rótulo do marcador na trilha lateral
-    tipo: TipoNivel;   // define a cor e a largura do cartão
-    rotulo?: string;   // faixa de texto acima dos cartões; {n} vira a contagem
-  }
+.conteudo { display:flex; flex-direction:column; align-items:center; min-width:0; }
+.faixa {
+  width:100%; text-align:center; font-family:var(--cond); font-size:12px;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--mist); margin-bottom:14px;
+}
+.nivel#n6 .faixa { color:var(--terceiro-deep); }
 
-  /** Só isto é salvo/exportado. A estrutura visual fica no código. */
-  type Dados = Record<string, Cargo[]>;
+/* ---------- conectores entre níveis ---------- */
+.conector {
+  padding-left:var(--trilha); display:flex; flex-direction:column; align-items:center;
+}
+.fio { width:2px; height:26px; background:var(--line); }
+.fio--curto { height:18px; }
+.barramento { width:min(100%,880px); height:2px; background:var(--line); }
 
-  // ============================================================
-  // 2. ESTRUTURA DOS NÍVEIS (não muda com a edição)
-  // ============================================================
+/* ---------- cartões ---------- */
+.cargos { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; width:100%; }
+.cargos--base, .cargos--terceiro {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(255px,1fr)); justify-items:center;
+}
 
-  const NIVEIS: NivelMeta[] = [
-    { id: 'n1', marco: 'N1', tipo: 'topo' },
-    { id: 'n2', marco: 'N2', tipo: 'staff', rotulo: 'Assessoria \u00B7 {n} colaboradores' },
-    { id: 'n3', marco: 'N3', tipo: 'linha' },
-    { id: 'n4', marco: 'N4', tipo: 'linha' },
-    { id: 'n5', marco: 'N5', tipo: 'base', rotulo: 'Equipes operacionais \u00B7 {n} colaboradores' },
-    { id: 'n6', marco: 'N6', tipo: 'terceiro', rotulo: 'Colaboradores terceirizados \u00B7 {n}' }
-  ];
+.card {
+  background:var(--white); border:1px solid var(--line); border-top:4px solid var(--steel);
+  width:255px; padding:12px 14px 13px; text-align:left;
+  box-shadow:0 1px 2px rgba(22,32,43,.06);
+}
+.card header { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.card h3 {
+  font-family:var(--cond); font-weight:600; text-transform:uppercase; letter-spacing:.03em;
+  font-size:17px; line-height:1.15; margin:0; flex:1;
+}
+.qtd {
+  font-family:var(--cond); font-size:13px; color:var(--steel);
+  border:1px solid var(--line); padding:1px 7px; letter-spacing:.05em;
+}
+.eyebrow {
+  width:100%; font-family:var(--cond); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--hiviz-deep);
+}
+.nomes { list-style:none; margin:9px 0 0; padding:9px 0 0; border-top:1px solid var(--paper); }
+.nomes li { font-size:12.6px; line-height:1.5; color:var(--steel); }
+.nomes li + li { margin-top:1px; }
 
-  // ============================================================
-  // 3. DADOS INICIAIS (o que vai versionado no Git)
-  // ============================================================
+.card--topo { border-top-color:var(--ink); width:300px; }
+.card--topo h3 { font-size:21px; }
+.card--topo .nomes li { font-size:14px; font-weight:600; color:var(--ink); }
+.card--staff { border-top-color:var(--hiviz); width:250px; }
+.card--linha { border-top-color:var(--ink); width:280px; }
+.card--linha .nomes li { font-size:13.5px; font-weight:500; color:var(--ink); }
+.card--terceiro { border-top-color:var(--terceiro); }
 
-  const DADOS_INICIAIS: Dados = {
-    n1: [
-      { nome: 'Gestor', colaboradores: ['Francisco Claudiomar da Silva'] }
-    ],
-    n2: [
-      { nome: 'Técnico de Segurança do Trabalho', colaboradores: ['Ivan Luiz Calado Moura'] },
-      { nome: 'Analista de RH', colaboradores: ['Simone Rodrigues da Silva'] },
-      { nome: 'Analista de Qualidade', colaboradores: ['Ilton Coelho'] }
-    ],
-    n3: [
-      { nome: 'Supervisor de Logística', colaboradores: ['Mateus Felipe Conceicao Dias'] }
-    ],
-    n4: [
-      { nome: 'Encarregado de Armazém', colaboradores: ['Higor Henrique Faria Salles'] }
-    ],
-    n5: [
-      {
-        nome: 'Líder Logístico',
-        colaboradores: [
-          'Camila Peixoto da Silva',
-          'Diego Maicon Moreira Fernandes de Araujo',
-          'Douglas Henrique Nunes de Campos'
-        ]
-      },
-      {
-        nome: 'Conferente',
-        colaboradores: [
-          'Emanuelly Sander de Oliveira Soares',
-          'Ingrid Marcelly Andrade de Jesus',
-          'Kelly Pires Gomes Rodrigues',
-          'Marcelo Correa de Almeida Ribeiro',
-          'Mayara Susan Xavier Alves',
-          'Pamella Fernanda dos Santos Resende',
-          'Rikelmy Rodrigues Souza da Cruz',
-          'Robson Junio de Paula',
-          'Robson de Oliveira Soares',
-          'Vania Maria Adriano'
-        ]
-      },
-      {
-        nome: 'Operador de Empilhadeira',
-        colaboradores: [
-          'Denison Rodrigues Peres',
-          'Josue Xavier Ferreira da Silva',
-          'Luiz Henrique de Paiva',
-          'Rian Menezes de Matos',
-          'Roberto Carlos Goncalves Moreira',
-          'Vanderlucio Alves da Silva'
-        ]
-      },
-      {
-        nome: 'Ajudante de Logística',
-        colaboradores: [
-          'Adalberto de Almeida Macedo',
-          'Adriano Marques Martins',
-          'Amanda Nicole Gomes de Sa',
-          'Ana Caroline Pereira Freire',
-          'Clauber Augusto Soares',
-          'Daniela Vitoria Alves Maria',
-          'Helen Kethelyn Gomes da Silva',
-          'Larissa Carolina da Silva dos Santos',
-          'Osvane Junior Costa Goncalves',
-          'Rafael Guimaraes Rocha Braga Pereira',
-          'Thays Cristianne da Silva Tavares',
-          'Xaiane Gomes de Araujo'
-        ]
-      },
-      { nome: 'Auxiliar de PCE', colaboradores: ['Camila Maria Fonseca', 'Josiely Ferreira da Silva'] },
-      { nome: 'Auxiliar Administrativo', colaboradores: ['Camila Lopes do Nascimento', 'Thiago Domingos da Silva'] },
-      { nome: 'Oficial de Manutenção', colaboradores: ['Jorge Augusto da Silva'] },
-      { nome: 'Auxiliar de Limpeza', colaboradores: ['Jenifer de Almeida Carvalho', 'Soraia de Mello'] }
-    ],
-    n6: []
-  };
+.vazio {
+  grid-column:1 / -1; width:100%; text-align:center; font-size:13px; color:var(--mist);
+  border:1px dashed var(--line); padding:18px; margin:0;
+}
 
-  // ============================================================
-  // 4. ESTADO E PERSISTÊNCIA
-  // ============================================================
+.rodape {
+  margin-top:40px; padding-top:14px; border-top:1px solid var(--line);
+  display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between;
+  font-size:11.5px; color:var(--mist);
+}
 
-  const STORAGE_KEY = 'organograma-dados-v3';
-  const arvore = document.getElementById('arvore');
-  const body = document.body;
+/* ---------- controles de edição ---------- */
+.so-edicao { display:none; }
+body.modo-edicao .add-colaborador { display:inline-flex; }
+body.modo-edicao .del-colaborador { display:inline-flex; }
+body.modo-edicao .del-cargo { display:block; }
+body.modo-edicao .add-cargo { display:block; }
 
-  if (!arvore) {
-    console.error('Elemento #arvore não encontrado no HTML.');
-    return;
-  }
+.add-colaborador {
+  margin-left:auto; width:20px; height:20px; border:1px solid var(--line); background:var(--white);
+  color:var(--steel); font-family:var(--cond); font-size:14px; line-height:1; cursor:pointer;
+  align-items:center; justify-content:center; padding:0;
+}
+.add-colaborador:hover { background:var(--hiviz); border-color:var(--hiviz-deep); color:var(--ink); }
+.card--terceiro .add-colaborador:hover { background:var(--terceiro); border-color:var(--terceiro-deep); color:var(--white); }
 
-  let dados: Dados = clonar(DADOS_INICIAIS);
+body.modo-edicao .nomes li { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.del-colaborador {
+  border:none; background:none; color:var(--mist); cursor:pointer; font-size:14px;
+  line-height:1; padding:0 2px;
+}
+.del-colaborador:hover { color:var(--terceiro); }
 
-  function clonar(origem: Dados): Dados {
-    return JSON.parse(JSON.stringify(origem)) as Dados;
-  }
+.del-cargo {
+  margin-top:10px; width:100%; font-family:var(--cond); text-transform:uppercase;
+  letter-spacing:.06em; font-size:11px; background:var(--white); border:1px solid var(--line);
+  color:var(--mist); padding:6px 8px; cursor:pointer;
+}
+.del-cargo:hover { border-color:var(--terceiro); color:var(--terceiro); background:var(--terceiro-claro); }
 
-  function salvar(): void {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-    } catch (e) {
-      console.warn('Não foi possível salvar localmente:', e);
-    }
-  }
+.add-cargo {
+  margin-top:16px; font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em;
+  font-size:12px; background:var(--white); border:1px dashed var(--line); color:var(--steel);
+  padding:10px 14px; cursor:pointer; width:255px;
+}
+.add-cargo:hover { border-color:var(--ink); color:var(--ink); }
+#n6 .add-cargo:hover { border-color:var(--terceiro); color:var(--terceiro-deep); }
 
-  /** Aceita apenas dados no formato esperado; qualquer coisa fora disso é descartada. */
-  function validar(bruto: unknown): Dados | null {
-    if (typeof bruto !== 'object' || bruto === null) return null;
-    const entrada = bruto as Record<string, unknown>;
-    const saida: Dados = {};
+button:focus-visible { outline:2px solid var(--hiviz-deep); outline-offset:2px; }
 
-    for (const nivel of NIVEIS) {
-      const lista = entrada[nivel.id];
-      if (!Array.isArray(lista)) {
-        saida[nivel.id] = [];
-        continue;
-      }
-      saida[nivel.id] = lista
-        .filter((item): item is Cargo => {
-          const c = item as Cargo;
-          return !!c && typeof c.nome === 'string' && Array.isArray(c.colaboradores);
-        })
-        .map((c) => ({
-          nome: c.nome,
-          colaboradores: c.colaboradores.filter((n) => typeof n === 'string')
-        }));
-    }
-    return saida;
-  }
-
-  function carregar(): void {
-    try {
-      const salvo = localStorage.getItem(STORAGE_KEY);
-      if (!salvo) return;
-      const validado = validar(JSON.parse(salvo));
-      if (validado) dados = validado;
-    } catch (e) {
-      console.warn('Dados salvos inválidos, usando a versão publicada:', e);
-    }
-  }
-
-  // ============================================================
-  // 5. RENDERIZAÇÃO
-  // ============================================================
-
-  function el(tag: string, classe?: string, texto?: string): HTMLElement {
-    const node = document.createElement(tag);
-    if (classe) node.className = classe;
-    if (texto !== undefined) node.textContent = texto;
-    return node;
-  }
-
-  function botao(classe: string, texto: string, rotuloAcessivel: string): HTMLButtonElement {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = classe;
-    b.textContent = texto;
-    b.setAttribute('aria-label', rotuloAcessivel);
-    return b;
-  }
-
-  function criarCard(cargo: Cargo, nivel: NivelMeta, indiceCargo: number): HTMLElement {
-    const card = el('article', 'card card--' + nivel.tipo);
-    card.dataset.nivel = nivel.id;
-    card.dataset.cargo = String(indiceCargo);
-
-    const header = el('header');
-    if (nivel.tipo === 'staff') header.appendChild(el('span', 'eyebrow', 'Assessoria'));
-    header.appendChild(el('h3', undefined, cargo.nome));
-    header.appendChild(el('span', 'qtd', String(cargo.colaboradores.length)));
-    header.appendChild(botao('add-colaborador so-edicao no-print', '+', 'Adicionar colaborador'));
-    card.appendChild(header);
-
-    const ul = el('ul', 'nomes');
-    cargo.colaboradores.forEach((nome, i) => {
-      const li = el('li');
-      li.dataset.colaborador = String(i);
-      li.appendChild(document.createTextNode(nome));
-      li.appendChild(botao('del-colaborador so-edicao no-print', '\u00D7', 'Remover ' + nome));
-      ul.appendChild(li);
-    });
-    card.appendChild(ul);
-
-    card.appendChild(botao('del-cargo so-edicao no-print', 'Remover cargo', 'Remover o cargo ' + cargo.nome));
-    return card;
-  }
-
-  function criarConector(cargosAbaixo: number): HTMLElement {
-    const conector = el('div', 'conector');
-    conector.appendChild(el('div', 'fio'));
-    if (cargosAbaixo > 1) {
-      conector.appendChild(el('div', 'barramento'));
-      conector.appendChild(el('div', 'fio fio--curto'));
-    }
-    return conector;
-  }
-
-  function render(): void {
-    arvore!.textContent = '';
-
-    NIVEIS.forEach((nivel, indice) => {
-      const cargos = dados[nivel.id] || [];
-
-      if (indice > 0) arvore!.appendChild(criarConector(cargos.length));
-
-      // Cada nível é uma LINHA de grid: coluna 1 = marco, coluna 2 = cartões.
-      // O alinhamento passa a ser responsabilidade do CSS, não de cálculo em pixel.
-      const secao = el('section', 'nivel');
-      secao.id = nivel.id;
-
-      const marco = el('div', 'marco marco--' + nivel.tipo);
-      marco.appendChild(el('span', undefined, nivel.marco));
-      secao.appendChild(marco);
-
-      const conteudo = el('div', 'conteudo');
-
-      if (nivel.rotulo) {
-        const total = cargos.reduce((soma, c) => soma + c.colaboradores.length, 0);
-        conteudo.appendChild(el('div', 'faixa', nivel.rotulo.replace('{n}', String(total))));
-      }
-
-      const grade = el('div', 'cargos cargos--' + nivel.tipo);
-      if (cargos.length === 0) {
-        grade.appendChild(el('p', 'vazio', 'Nenhum cargo cadastrado neste nível. Ative "Editar" e use o botão abaixo.'));
-      }
-      cargos.forEach((cargo, i) => grade.appendChild(criarCard(cargo, nivel, i)));
-      conteudo.appendChild(grade);
-
-      const add = botao('add-cargo so-edicao no-print', '+ Novo cargo', 'Adicionar cargo no ' + nivel.marco);
-      add.dataset.nivel = nivel.id;
-      conteudo.appendChild(add);
-
-      secao.appendChild(conteudo);
-      arvore!.appendChild(secao);
-    });
-
-    atualizarResumo();
-  }
-
-  function atualizarResumo(): void {
-    let colaboradores = 0;
-    let cargos = 0;
-    for (const nivel of NIVEIS) {
-      const lista = dados[nivel.id] || [];
-      cargos += lista.length;
-      colaboradores += lista.reduce((soma, c) => soma + c.colaboradores.length, 0);
-    }
-    const elTotal = document.getElementById('total-colaboradores');
-    const elCargos = document.getElementById('total-cargos');
-    if (elTotal) elTotal.textContent = String(colaboradores);
-    if (elCargos) elCargos.textContent = 'Cargos: ' + cargos;
-  }
-
-  function aplicar(): void {
-    render();
-    salvar();
-  }
-
-  // ============================================================
-  // 6. AÇÕES DE EDIÇÃO
-  // ============================================================
-
-  function localizarCargo(alvo: HTMLElement): { nivelId: string; indice: number } | null {
-    const card = alvo.closest('.card') as HTMLElement | null;
-    if (!card || !card.dataset.nivel || card.dataset.cargo === undefined) return null;
-    return { nivelId: card.dataset.nivel, indice: Number(card.dataset.cargo) };
-  }
-
-  function adicionarColaborador(nivelId: string, indice: number): void {
-    const nome = window.prompt('Nome do novo colaborador:');
-    if (!nome || !nome.trim()) return;
-    dados[nivelId][indice].colaboradores.push(nome.trim());
-    aplicar();
-  }
-
-  function removerColaborador(nivelId: string, indiceCargo: number, indiceColab: number): void {
-    const nome = dados[nivelId][indiceCargo].colaboradores[indiceColab];
-    if (!window.confirm('Remover ' + nome + '?')) return;
-    dados[nivelId][indiceCargo].colaboradores.splice(indiceColab, 1);
-    aplicar();
-  }
-
-  function removerCargo(nivelId: string, indice: number): void {
-    const cargo = dados[nivelId][indice];
-    if (!window.confirm('Remover o cargo "' + cargo.nome + '" e seus ' + cargo.colaboradores.length + ' colaborador(es)?')) return;
-    dados[nivelId].splice(indice, 1);
-    aplicar();
-  }
-
-  function novoCargo(nivelId: string): void {
-    const nome = window.prompt('Nome do novo cargo:');
-    if (!nome || !nome.trim()) return;
-    const colaborador = window.prompt('Nome do primeiro colaborador (deixe em branco para cadastrar depois):');
-    const lista: string[] = colaborador && colaborador.trim() ? [colaborador.trim()] : [];
-    dados[nivelId].push({ nome: nome.trim(), colaboradores: lista });
-    aplicar();
-  }
-
-  // ============================================================
-  // 7. EVENTOS
-  // ============================================================
-
-  arvore.addEventListener('click', (e: MouseEvent) => {
-    if (!body.classList.contains('modo-edicao')) return;
-    const alvo = e.target as HTMLElement;
-
-    const btnDelColab = alvo.closest('.del-colaborador');
-    if (btnDelColab) {
-      const ref = localizarCargo(alvo);
-      const li = alvo.closest('li') as HTMLElement | null;
-      if (ref && li && li.dataset.colaborador !== undefined) {
-        removerColaborador(ref.nivelId, ref.indice, Number(li.dataset.colaborador));
-      }
-      return;
-    }
-
-    if (alvo.closest('.del-cargo')) {
-      const ref = localizarCargo(alvo);
-      if (ref) removerCargo(ref.nivelId, ref.indice);
-      return;
-    }
-
-    if (alvo.closest('.add-colaborador')) {
-      const ref = localizarCargo(alvo);
-      if (ref) adicionarColaborador(ref.nivelId, ref.indice);
-      return;
-    }
-
-    const btnAddCargo = alvo.closest('.add-cargo') as HTMLElement | null;
-    if (btnAddCargo && btnAddCargo.dataset.nivel) {
-      novoCargo(btnAddCargo.dataset.nivel);
-      return;
-    }
-  });
-
-  const btnEditar = document.getElementById('btn-editar') as HTMLButtonElement | null;
-  if (btnEditar) {
-    btnEditar.addEventListener('click', () => {
-      const ativo = body.classList.toggle('modo-edicao');
-      btnEditar.textContent = ativo ? 'Concluir' : 'Editar';
-      btnEditar.classList.toggle('ativo', ativo);
-    });
-  }
-
-  const btnExportar = document.getElementById('btn-exportar');
-  if (btnExportar) {
-    btnExportar.addEventListener('click', () => {
-      const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'organograma.json';
-      link.click();
-      URL.revokeObjectURL(url);
-    });
-  }
-
-  const inputImportar = document.getElementById('input-importar') as HTMLInputElement | null;
-  const btnImportar = document.getElementById('btn-importar');
-  if (btnImportar && inputImportar) {
-    btnImportar.addEventListener('click', () => inputImportar.click());
-    inputImportar.addEventListener('change', () => {
-      const arquivo = inputImportar.files && inputImportar.files[0];
-      if (!arquivo) return;
-      const leitor = new FileReader();
-      leitor.onload = () => {
-        try {
-          const validado = validar(JSON.parse(String(leitor.result)));
-          if (!validado) throw new Error('formato inesperado');
-          dados = validado;
-          aplicar();
-        } catch (err) {
-          window.alert('Não foi possível ler este arquivo. Selecione um organograma.json exportado por esta página.');
-          console.warn(err);
-        }
-      };
-      leitor.readAsText(arquivo);
-      inputImportar.value = '';
-    });
-  }
-
-  const btnRestaurar = document.getElementById('btn-restaurar');
-  if (btnRestaurar) {
-    btnRestaurar.addEventListener('click', () => {
-      if (!window.confirm('Descartar as alterações locais e voltar à versão publicada?')) return;
-      dados = clonar(DADOS_INICIAIS);
-      aplicar();
-    });
-  }
-
-  // ============================================================
-  // 8. INICIALIZAÇÃO
-  // ============================================================
-
-  carregar();
-  render();
-})();
+@media (max-width:820px) {
+  :root { --trilha:0px; }
+  .arvore::before { display:none; }
+  .nivel { grid-template-columns:1fr; }
+  .marco { margin-bottom:10px; }
+  .marco span { width:100%; max-width:420px; }
+  .card, .card--topo, .card--linha, .card--terceiro, .card--staff, .add-cargo { width:100%; max-width:420px; }
+  .cargos--base, .cargos--terceiro { grid-template-columns:1fr; }
+  .barramento { display:none; }
+  .acoes { width:100%; justify-content:space-between; }
+}
+@media print {
+  body { background:var(--white); padding:0; }
+  .card { box-shadow:none; break-inside:avoid; }
+  .nivel { break-inside:avoid; }
+  .no-print { display:none !important; }
+  @page { size:A3 portrait; margin:12mm; }
+}
