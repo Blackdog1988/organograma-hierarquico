@@ -1,0 +1,16 @@
+{
+  "name": "organograma",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').copyFileSync('dist/script.js','script.js')\"",
+    "watch": "tsc --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}
