@@ -12,147 +12,35 @@
 <body>
 <div class="folha">
 
-  <div class="topo">
+  <header class="topo">
     <div>
       <h1>Organograma Hierárquico</h1>
       <p>Estrutura funcional da operação logística, organizada em seis níveis de subordinação.</p>
     </div>
     <div class="acoes">
       <div class="selo">
-        <span>Colaboradores</span><b id="total-colaboradores">44</b>
-        <span id="total-cargos">Cargos: 14</span>
+        <span>Colaboradores</span><b id="total-colaboradores">0</b>
+        <span id="total-cargos">Cargos: 0</span>
       </div>
-      <button id="btn-editar" class="no-print" type="button">Editar</button>
+      <div class="botoes no-print">
+        <button id="btn-editar" type="button" class="botao botao--primario">Editar</button>
+        <button id="btn-exportar" type="button" class="botao">Exportar</button>
+        <button id="btn-importar" type="button" class="botao">Importar</button>
+        <button id="btn-restaurar" type="button" class="botao">Restaurar</button>
+        <input id="input-importar" type="file" accept="application/json" hidden>
+      </div>
     </div>
-  </div>
+  </header>
   <div class="barra-hiviz"></div>
 
-  <div class="arvore">
-    <div class="trilho">
-      <div class="marco" data-target="n1" style="top:26px"><span>N1</span></div>
-      <div class="marco staff" data-target="n2" style="top:170px"><span>N2</span></div>
-      <div class="marco" data-target="n3" style="top:395px"><span>N3</span></div>
-      <div class="marco" data-target="n4" style="top:560px"><span>N4</span></div>
-      <div class="marco" data-target="n5" style="top:720px"><span>N5</span></div>
-      <div class="marco terceiro" data-target="n6" style="top:1100px"><span>N6</span></div>
-    </div>
+  <main class="arvore" id="arvore">
+    <p class="carregando">Carregando organograma…</p>
+  </main>
 
-    <div class="nivel">
-      <article class="card card--topo" id="n1">
-      <header><h3>Gestor</h3><span class="qtd">1</span></header>
-      <ul class="nomes"><li>Francisco Claudiomar da Silva</li></ul>
-    </article>
-      <div class="fio"></div>
-      <div class="barramento"></div>
-      <div class="linha" id="n2" style="margin-top:0">
-        <div class="ramo"><div class="fio fio--curto"></div><article class="card card--staff">
-      <header><span class="eyebrow">Assessoria</span><h3>Técnico de Segurança do Trabalho</h3><span class="qtd">1</span></header>
-      <ul class="nomes"><li>Ivan Luiz Calado Moura</li></ul>
-    </article></div>
-        <div class="ramo"><div class="fio fio--curto"></div><article class="card card--staff">
-      <header><span class="eyebrow">Assessoria</span><h3>Analista de RH</h3><span class="qtd">1</span></header>
-      <ul class="nomes"><li>Simone Rodrigues da Silva</li></ul>
-    </article></div>
-        <div class="ramo"><div class="fio fio--curto"></div><article class="card card--staff">
-      <header><span class="eyebrow">Assessoria</span><h3>Analista de Qualidade</h3><span class="qtd">1</span></header>
-      <ul class="nomes"><li>Ilton Coelho</li></ul>
-    </article></div>
-      </div>
-
-      <div class="fio" style="height:34px"></div>
-      <article class="card card--linha" id="n3">
-      <header><h3>Supervisor de Logística</h3><span class="qtd">1</span></header>
-      <ul class="nomes"><li>Mateus Felipe Conceicao Dias</li></ul>
-    </article>
-      <div class="fio"></div>
-      <article class="card card--linha" id="n4">
-      <header><h3>Encarregado de Armazém</h3><span class="qtd">1</span></header>
-      <ul class="nomes"><li>Higor Henrique Faria Salles</li></ul>
-    </article>
-      <div class="fio"></div>
-      <div class="barramento"></div>
-      <div class="fio fio--curto"></div>
-
-      <div class="base-rotulo" id="rotulo-base">Equipes operacionais &middot; 38 colaboradores</div>
-      <div class="base" id="n5">
-        <article class="card card--base">
-      <header><h3>Líder Logístico</h3><span class="qtd">3</span></header>
-      <ul class="nomes"><li>Camila Peixoto da Silva</li>
-<li>Diego Maicon Moreira Fernandes de Araujo</li>
-<li>Douglas Henrique Nunes de Campos</li></ul>
-    </article>
-<article class="card card--base">
-      <header><h3>Conferente</h3><span class="qtd">10</span></header>
-      <ul class="nomes"><li>Emanuelly Sander de Oliveira Soares</li>
-<li>Ingrid Marcelly Andrade de Jesus</li>
-<li>Kelly Pires Gomes Rodrigues</li>
-<li>Marcelo Correa de Almeida Ribeiro</li>
-<li>Mayara Susan Xavier Alves</li>
-<li>Pamella Fernanda dos Santos Resende</li>
-<li>Rikelmy Rodrigues Souza da Cruz</li>
-<li>Robson Junio de Paula</li>
-<li>Robson de Oliveira Soares</li>
-<li>Vania Maria Adriano</li></ul>
-    </article>
-<article class="card card--base">
-      <header><h3>Operador de Empilhadeira</h3><span class="qtd">6</span></header>
-      <ul class="nomes"><li>Denison Rodrigues Peres</li>
-<li>Josue Xavier Ferreira da Silva</li>
-<li>Luiz Henrique de Paiva</li>
-<li>Rian Menezes de Matos</li>
-<li>Roberto Carlos Goncalves Moreira</li>
-<li>Vanderlucio Alves da Silva</li></ul>
-    </article>
-<article class="card card--base">
-      <header><h3>Ajudante de Logística</h3><span class="qtd">12</span></header>
-      <ul class="nomes"><li>Adalberto de Almeida Macedo</li>
-<li>Adriano Marques Martins</li>
-<li>Amanda Nicole Gomes de Sa</li>
-<li>Ana Caroline Pereira Freire</li>
-<li>Clauber Augusto Soares</li>
-<li>Daniela Vitoria Alves Maria</li>
-<li>Helen Kethelyn Gomes da Silva</li>
-<li>Larissa Carolina da Silva dos Santos</li>
-<li>Osvane Junior Costa Goncalves</li>
-<li>Rafael Guimaraes Rocha Braga Pereira</li>
-<li>Thays Cristianne da Silva Tavares</li>
-<li>Xaiane Gomes de Araujo</li></ul>
-    </article>
-<article class="card card--base">
-      <header><h3>Auxiliar de PCE</h3><span class="qtd">2</span></header>
-      <ul class="nomes"><li>Camila Maria Fonseca</li>
-<li>Josiely Ferreira da Silva</li></ul>
-    </article>
-<article class="card card--base">
-      <header><h3>Auxiliar Administrativo</h3><span class="qtd">2</span></header>
-      <ul class="nomes"><li>Camila Lopes do Nascimento</li>
-<li>Thiago Domingos da Silva</li></ul>
-    </article>
-<article class="card card--base">
-      <header><h3>Oficial de Manutenção</h3><span class="qtd">1</span></header>
-      <ul class="nomes"><li>Jorge Augusto da Silva</li></ul>
-    </article>
-<article class="card card--base">
-      <header><h3>Auxiliar de Limpeza</h3><span class="qtd">2</span></header>
-      <ul class="nomes"><li>Jenifer de Almeida Carvalho</li>
-<li>Soraia de Mello</li></ul>
-    </article>
-        <button class="add-cargo so-edicao no-print" type="button" data-container="operacional" data-classe="card--base">+ Novo cargo</button>
-      </div>
-
-      <div class="fio" style="height:34px"></div>
-      <div class="base-rotulo rotulo-terceiro" id="rotulo-terceiro">Colaboradores terceirizados &middot; 0</div>
-      <div class="base base-terceiros" id="n6">
-        <p class="vazio so-edicao">Nenhum colaborador terceirizado cadastrado. Clique em "Editar" e depois em "+ Novo cargo terceirizado" para adicionar.</p>
-        <button class="add-cargo so-edicao no-print" type="button" data-container="terceiro" data-classe="card--terceiro">+ Novo cargo terceirizado</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="rodape">
+  <footer class="rodape">
     <span>Fonte: relação nominal de colaboradores por cargo.</span>
-    <span>N2 em amarelo = funções de assessoria (segurança, RH e qualidade). N6 em vermelho = colaboradores terceirizados.</span>
-  </div>
+    <span>N2 em amarelo = funções de assessoria. N6 em vermelho = colaboradores terceirizados.</span>
+  </footer>
 
 </div>
 <script src="script.js" defer></script>
