@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organograma Hierárquico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="folha">
+
+  <header class="topo">
+    <div>
+      <h1>Organograma Hierárquico</h1>
+      <p>Estrutura funcional da operação logística, organizada em seis níveis de subordinação.</p>
+    </div>
+    <div class="acoes">
+      <div class="selo">
+        <span>Colaboradores</span><b id="total-colaboradores">0</b>
+        <span id="total-cargos">Cargos: 0</span>
+      </div>
+      <div class="botoes no-print">
+        <button id="btn-editar" type="button" class="botao botao--primario">Editar</button>
+        <button id="btn-exportar" type="button" class="botao">Exportar</button>
+        <button id="btn-importar" type="button" class="botao">Importar</button>
+        <button id="btn-restaurar" type="button" class="botao">Restaurar</button>
+        <input id="input-importar" type="file" accept="application/json" hidden>
+      </div>
+    </div>
+  </header>
+  <div class="barra-hiviz"></div>
+
+  <main class="arvore" id="arvore">
+    <p class="carregando">Carregando organograma…</p>
+  </main>
+
+  <footer class="rodape">
+    <span>Fonte: relação nominal de colaboradores por cargo.</span>
+    <span>N2 em amarelo = funções de assessoria. N6 em vermelho = colaboradores terceirizados.</span>
+  </footer>
+
+</div>
+<script src="script.js" defer></script>
+</body>
+</html>

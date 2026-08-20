@@ -1,0 +1,192 @@
+:root {
+  --ink:#16202B; --steel:#44586B; --mist:#8296A6;
+  --line:#C3CDD6; --paper:#EFF2F5; --white:#FFFFFF;
+  --hiviz:#FFC400; --hiviz-deep:#B98A00;
+  --terceiro:#D63A2E; --terceiro-deep:#8F241B; --terceiro-claro:#FDEDEC;
+  --trilha:92px; /* 74px do marco + 18px de respiro */
+  --cond:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'Inter','Segoe UI',Arial,sans-serif;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:32px 20px 56px; background:var(--paper); color:var(--ink);
+  font-family:var(--body); -webkit-font-smoothing:antialiased;
+}
+.folha { max-width:1180px; margin:0 auto; }
+
+/* ---------- cabeçalho ---------- */
+.topo {
+  display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+  gap:16px; padding-bottom:14px; border-bottom:3px solid var(--ink); margin-bottom:8px;
+}
+.topo h1 {
+  font-family:var(--cond); font-weight:700; font-size:38px; line-height:1;
+  letter-spacing:.02em; text-transform:uppercase; margin:0;
+}
+.topo p { margin:6px 0 0; color:var(--steel); font-size:13.5px; max-width:52ch; }
+.acoes { display:flex; align-items:flex-end; gap:18px; flex-wrap:wrap; }
+.selo {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em;
+  font-size:12px; color:var(--steel); text-align:right; line-height:1.7;
+}
+.selo b { display:block; font-size:30px; color:var(--ink); letter-spacing:0; line-height:1; }
+.botoes { display:flex; gap:6px; flex-wrap:wrap; }
+.barra-hiviz {
+  height:7px; margin-bottom:34px;
+  background:repeating-linear-gradient(135deg,var(--hiviz) 0 14px,var(--ink) 14px 28px);
+}
+
+/* ---------- botões do topo ---------- */
+.botao {
+  font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em; font-size:12px;
+  background:var(--white); color:var(--steel); border:1px solid var(--line);
+  padding:9px 14px; cursor:pointer;
+}
+.botao:hover { border-color:var(--ink); color:var(--ink); }
+.botao:focus-visible { outline:2px solid var(--hiviz-deep); outline-offset:2px; }
+.botao--primario { background:var(--ink); color:var(--white); border-color:var(--ink); }
+.botao--primario:hover { background:var(--steel); border-color:var(--steel); color:var(--white); }
+.botao--primario.ativo { background:var(--hiviz); border-color:var(--hiviz-deep); color:var(--ink); }
+
+/* ---------- árvore: cada nível é uma linha de grid ---------- */
+/* O marco fica na coluna 1 e os cartões na coluna 2, na MESMA linha.
+   Isso mantém N1..N6 alinhados aos seus cargos independentemente da
+   quantidade de colaboradores, da fonte carregada ou do zoom. */
+.arvore { position:relative; }
+.arvore::before {
+  content:""; position:absolute; left:26px; top:12px; bottom:12px;
+  width:2px; background:var(--line);
+}
+.carregando { padding-left:var(--trilha); color:var(--mist); font-size:13px; }
+
+.nivel {
+  display:grid; grid-template-columns:74px 1fr; gap:0 18px; align-items:center;
+}
+.marco { position:relative; z-index:1; }
+.marco span {
+  width:54px; height:26px; display:grid; place-items:center; background:var(--ink);
+  color:var(--white); font-family:var(--cond); font-size:13px; letter-spacing:.14em;
+  text-transform:uppercase;
+}
+.marco--staff span { background:var(--hiviz); color:var(--ink); }
+.marco--terceiro span { background:var(--terceiro); color:var(--white); }
+
+.conteudo { display:flex; flex-direction:column; align-items:center; min-width:0; }
+.faixa {
+  width:100%; text-align:center; font-family:var(--cond); font-size:12px;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--mist); margin-bottom:14px;
+}
+.nivel#n6 .faixa { color:var(--terceiro-deep); }
+
+/* ---------- conectores entre níveis ---------- */
+.conector {
+  padding-left:var(--trilha); display:flex; flex-direction:column; align-items:center;
+}
+.fio { width:2px; height:26px; background:var(--line); }
+.fio--curto { height:18px; }
+.barramento { width:min(100%,880px); height:2px; background:var(--line); }
+
+/* ---------- cartões ---------- */
+.cargos { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; width:100%; }
+.cargos--base, .cargos--terceiro {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(255px,1fr)); justify-items:center;
+}
+
+.card {
+  background:var(--white); border:1px solid var(--line); border-top:4px solid var(--steel);
+  width:255px; padding:12px 14px 13px; text-align:left;
+  box-shadow:0 1px 2px rgba(22,32,43,.06);
+}
+.card header { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.card h3 {
+  font-family:var(--cond); font-weight:600; text-transform:uppercase; letter-spacing:.03em;
+  font-size:17px; line-height:1.15; margin:0; flex:1;
+}
+.qtd {
+  font-family:var(--cond); font-size:13px; color:var(--steel);
+  border:1px solid var(--line); padding:1px 7px; letter-spacing:.05em;
+}
+.eyebrow {
+  width:100%; font-family:var(--cond); font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--hiviz-deep);
+}
+.nomes { list-style:none; margin:9px 0 0; padding:9px 0 0; border-top:1px solid var(--paper); }
+.nomes li { font-size:12.6px; line-height:1.5; color:var(--steel); }
+.nomes li + li { margin-top:1px; }
+
+.card--topo { border-top-color:var(--ink); width:300px; }
+.card--topo h3 { font-size:21px; }
+.card--topo .nomes li { font-size:14px; font-weight:600; color:var(--ink); }
+.card--staff { border-top-color:var(--hiviz); width:250px; }
+.card--linha { border-top-color:var(--ink); width:280px; }
+.card--linha .nomes li { font-size:13.5px; font-weight:500; color:var(--ink); }
+.card--terceiro { border-top-color:var(--terceiro); }
+
+.vazio {
+  grid-column:1 / -1; width:100%; text-align:center; font-size:13px; color:var(--mist);
+  border:1px dashed var(--line); padding:18px; margin:0;
+}
+
+.rodape {
+  margin-top:40px; padding-top:14px; border-top:1px solid var(--line);
+  display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between;
+  font-size:11.5px; color:var(--mist);
+}
+
+/* ---------- controles de edição ---------- */
+.so-edicao { display:none; }
+body.modo-edicao .add-colaborador { display:inline-flex; }
+body.modo-edicao .del-colaborador { display:inline-flex; }
+body.modo-edicao .del-cargo { display:block; }
+body.modo-edicao .add-cargo { display:block; }
+
+.add-colaborador {
+  margin-left:auto; width:20px; height:20px; border:1px solid var(--line); background:var(--white);
+  color:var(--steel); font-family:var(--cond); font-size:14px; line-height:1; cursor:pointer;
+  align-items:center; justify-content:center; padding:0;
+}
+.add-colaborador:hover { background:var(--hiviz); border-color:var(--hiviz-deep); color:var(--ink); }
+.card--terceiro .add-colaborador:hover { background:var(--terceiro); border-color:var(--terceiro-deep); color:var(--white); }
+
+body.modo-edicao .nomes li { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.del-colaborador {
+  border:none; background:none; color:var(--mist); cursor:pointer; font-size:14px;
+  line-height:1; padding:0 2px;
+}
+.del-colaborador:hover { color:var(--terceiro); }
+
+.del-cargo {
+  margin-top:10px; width:100%; font-family:var(--cond); text-transform:uppercase;
+  letter-spacing:.06em; font-size:11px; background:var(--white); border:1px solid var(--line);
+  color:var(--mist); padding:6px 8px; cursor:pointer;
+}
+.del-cargo:hover { border-color:var(--terceiro); color:var(--terceiro); background:var(--terceiro-claro); }
+
+.add-cargo {
+  margin-top:16px; font-family:var(--cond); text-transform:uppercase; letter-spacing:.08em;
+  font-size:12px; background:var(--white); border:1px dashed var(--line); color:var(--steel);
+  padding:10px 14px; cursor:pointer; width:255px;
+}
+.add-cargo:hover { border-color:var(--ink); color:var(--ink); }
+#n6 .add-cargo:hover { border-color:var(--terceiro); color:var(--terceiro-deep); }
+
+button:focus-visible { outline:2px solid var(--hiviz-deep); outline-offset:2px; }
+
+@media (max-width:820px) {
+  :root { --trilha:0px; }
+  .arvore::before { display:none; }
+  .nivel { grid-template-columns:1fr; }
+  .marco { margin-bottom:10px; }
+  .marco span { width:100%; max-width:420px; }
+  .card, .card--topo, .card--linha, .card--terceiro, .card--staff, .add-cargo { width:100%; max-width:420px; }
+  .cargos--base, .cargos--terceiro { grid-template-columns:1fr; }
+  .barramento { display:none; }
+  .acoes { width:100%; justify-content:space-between; }
+}
+@media print {
+  body { background:var(--white); padding:0; }
+  .card { box-shadow:none; break-inside:avoid; }
+  .nivel { break-inside:avoid; }
+  .no-print { display:none !important; }
+  @page { size:A3 portrait; margin:12mm; }
+}
