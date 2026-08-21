@@ -123,5 +123,19 @@
       ]
     }
   ],
-  "n6": []
+  "n6": [
+    {
+      "nome": "RTA",
+      "colaboradores": [
+        "Regis Pacheco",
+        "Guilherme Crespo",
+        "Arthur Alves Moreira",
+        "Luiz Carlos",
+        "Diego Henrique da Silva",
+        "Leomar Marlon",
+        "Luiz Philippe Conforte",
+        "Danilo Daniel Souza"
+      ]
+    }
+  ]
 }
